@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ── Global Helpers ────────────────────────────────────────────────────────
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isVerified() { return isSignedIn(); } // App uses anonymous auth, so we just check presence
+
+    // ── Staff Validation ──────────────────────────────────────────────────────
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'pin', 'role']) &&
+             data.keys().size() == 4 &&
+             data.id is string && data.id.size() <= 64 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.pin is string && data.pin.size() <= 128 &&
+             data.role in ['STAFF', 'SUPERVISOR', 'OWNER', 'ADMIN', 'Staff', 'Supervisor', 'Owner'];
+    }
+
+    match /staff/{staffId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidUser(incoming()) && isValidId(staffId);
+      allow delete: if isSignedIn(); // In a real app, restrict to Admin, but this is a local POS terminal
+    }
+
+    // ── Inventory Validation ──────────────────────────────────────────────────
+    function isValidInventory(data) {
+      return data.keys().hasAll(['id', 'name', 'price', 'stock', 'category']) &&
+             data.id is string && data.name is string && data.name.size() <= 100 &&
+             data.price is number && data.price >= 0 &&
+             data.stock is number &&
+             data.category is string;
+    }
+
+    match /inventory/{itemId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidInventory(incoming()) && isValidId(itemId);
+      allow delete: if isSignedIn();
+    }
+
+    // ── Tabs Validation ───────────────────────────────────────────────────────
+    function isValidTab(data) {
+      return data.keys().hasAll(['id', 'staffId', 'customerName', 'items', 'total', 'status', 'createdAt', 'updatedAt']) &&
+             data.id is string &&
+             data.staffId is string &&
+             data.customerName is string && data.customerName.size() <= 200 &&
+             data.items is list &&
+             data.total is number &&
+             data.status is string &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    match /tabs/{tabId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidTab(incoming()) && isValidId(tabId);
+      allow update: if isSignedIn() && isValidTab(incoming()) && (
+        // Prevent editing paid tabs to change prices
+        (existing().status != 'PAID') || 
+        (incoming().diff(existing()).affectedKeys().hasOnly(['updatedAt']))
+      );
+      allow delete: if isSignedIn();
+    }
+
+    // ── Rooms Validation ──────────────────────────────────────────────────────
+    function isValidRoom(data) {
+      return data.keys().hasAll(['id', 'number', 'type', 'price', 'status']) &&
+             data.id is string &&
+             data.number is string &&
+             data.price is number &&
+             data.status is string;
+    }
+
+    match /rooms/{roomId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidRoom(incoming()) && isValidId(roomId);
+      allow delete: if isSignedIn();
+    }
+
+    // ── Audit Logs Validation ─────────────────────────────────────────────────
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'userName', 'userId', 'action', 'details', 'timestamp']) &&
+             data.timestamp is number;
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidAuditLog(incoming()) && isValidId(logId);
+      allow update, delete: if false; // Logs are immutable
+    }
+  }
+}

@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ── Global Security Primitives ────────────────────────────────────────────
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // ── Staff Management ──────────────────────────────────────────────────────
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'pin', 'role']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 200 &&
+             data.role is string;
+    }
+
+    match /staff/{staffId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidUser(incoming()) && isValidId(staffId);
+      allow delete: if isSignedIn();
+    }
+
+    // ── Inventory Controls ────────────────────────────────────────────────────
+    function isValidInventory(data) {
+      return data.keys().hasAll(['id', 'name', 'price', 'stock', 'category']) &&
+             data.id is string &&
+             data.price is number &&
+             data.stock is number;
+    }
+
+    match /inventory/{itemId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidInventory(incoming()) && isValidId(itemId);
+      allow delete: if isSignedIn();
+    }
+
+    // ── Sales Registry (Tabs) ─────────────────────────────────────────────────
+    function isValidTab(data) {
+      return data.keys().hasAll(['id', 'staffId', 'customerName', 'items', 'total', 'status', 'createdAt', 'updatedAt']) &&
+             data.id is string &&
+             data.staffId is string &&
+             data.items is list &&
+             data.total is number &&
+             data.createdAt is number;
+    }
+
+    match /tabs/{tabId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidTab(incoming()) && isValidId(tabId);
+      allow update: if isSignedIn() && isValidTab(incoming()) && (
+        (existing().status != 'PAID' && existing().status != 'Paid') || 
+        (incoming().diff(existing()).affectedKeys().hasOnly(['updatedAt']))
+      );
+      allow delete: if isSignedIn();
+    }
+
+    // ── Accommodation Management ──────────────────────────────────────────────
+    function isValidRoom(data) {
+      return data.keys().hasAll(['id', 'number', 'type', 'price', 'status']) &&
+             data.price is number;
+    }
+
+    match /rooms/{roomId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidRoom(incoming()) && isValidId(roomId);
+      allow delete: if isSignedIn();
+    }
+
+    // ── Audit Logs (Immutable) ────────────────────────────────────────────────
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'userName', 'userId', 'action', 'details', 'timestamp']);
+    }
+
+    match /auditLogs/{logId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidAuditLog(incoming()) && isValidId(logId);
+      allow update, delete: if false; 
+    }
+  }
+}

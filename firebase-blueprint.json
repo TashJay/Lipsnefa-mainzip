@@ -1,0 +1,109 @@
+{
+  "entities": {
+    "User": {
+      "title": "Staff Member",
+      "description": "User profile with access privileges and PIN",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "pin": { "type": "string" },
+        "role": { "type": "string", "enum": ["Staff", "Supervisor", "Owner"] }
+      },
+      "required": ["id", "name", "pin", "role"]
+    },
+    "InventoryItem": {
+      "title": "Inventory Item",
+      "description": "Product or drink in the nightclub catalog",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "category": { "type": "string" },
+        "isQuickSell": { "type": "boolean" }
+      },
+      "required": ["id", "name", "price", "stock", "category"]
+    },
+    "Tab": {
+      "title": "Sales Tab",
+      "description": "A customer order or active service session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "staffId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "items": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "number" },
+              "priceAtSale": { "type": "number" }
+            }
+          }
+        },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["Open", "Paid", "Unpaid"] },
+        "mpesaPhone": { "type": "string" },
+        "paymentType": { "type": "string", "enum": ["Cash", "M-Pesa", "Card"] },
+        "isDebt": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "staffId", "customerName", "items", "total", "status", "createdAt", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Security and activity trail",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userName": { "type": "string" },
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "userName", "userId", "action", "details", "timestamp"]
+    },
+    "Room": {
+      "title": "Room",
+      "description": "Accommodation status and price",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "number": { "type": "string" },
+        "type": { "type": "string" },
+        "price": { "type": "number" },
+        "status": { "type": "string", "enum": ["AVAILABLE", "OCCUPIED", "MAINTENANCE"] }
+      },
+      "required": ["id", "number", "type", "price", "status"]
+    }
+  },
+  "firestore": {
+    "staff": {
+      "schema": "User",
+      "description": "Collection of staff members"
+    },
+    "inventory": {
+      "schema": "InventoryItem",
+      "description": "Nightclub product inventory"
+    },
+    "tabs": {
+      "schema": "Tab",
+      "description": "Collection of sales tabs and orders"
+    },
+    "auditLogs": {
+      "schema": "AuditLog",
+      "description": "System audit trail"
+    },
+    "rooms": {
+      "schema": "Room",
+      "description": "Room status management"
+    }
+  }
+}
