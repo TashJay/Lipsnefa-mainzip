@@ -1,19 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // 0. Default Deny catch-all
-    match /{document=**} {
-      allow read, write: if false;
-    }
 
-    // ── Global Security Primitives ────────────────────────────────────────────
-    function isSignedIn() { return request.auth != null; }
+    // ── Data validation helpers ───────────────────────────────────────────────
     function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
 
-    // ── Staff Management ──────────────────────────────────────────────────────
     function isValidUser(data) {
       return data.keys().hasAll(['id', 'name', 'pin', 'role']) &&
              data.id is string && data.id.size() <= 128 &&
@@ -21,13 +13,6 @@ service cloud.firestore {
              data.role is string;
     }
 
-    match /staff/{staffId} {
-      allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidUser(incoming()) && isValidId(staffId);
-      allow delete: if isSignedIn();
-    }
-
-    // ── Inventory Controls ────────────────────────────────────────────────────
     function isValidInventory(data) {
       return data.keys().hasAll(['id', 'name', 'price', 'stock', 'category']) &&
              data.id is string &&
@@ -35,13 +20,6 @@ service cloud.firestore {
              data.stock is number;
     }
 
-    match /inventory/{itemId} {
-      allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidInventory(incoming()) && isValidId(itemId);
-      allow delete: if isSignedIn();
-    }
-
-    // ── Sales Registry (Tabs) ─────────────────────────────────────────────────
     function isValidTab(data) {
       return data.keys().hasAll(['id', 'staffId', 'customerName', 'items', 'total', 'status', 'createdAt', 'updatedAt']) &&
              data.id is string &&
@@ -51,37 +29,54 @@ service cloud.firestore {
              data.createdAt is number;
     }
 
-    match /tabs/{tabId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidTab(incoming()) && isValidId(tabId);
-      allow update: if isSignedIn() && isValidTab(incoming()) && (
-        (existing().status != 'PAID' && existing().status != 'Paid') || 
-        (incoming().diff(existing()).affectedKeys().hasOnly(['updatedAt']))
-      );
-      allow delete: if isSignedIn();
-    }
-
-    // ── Accommodation Management ──────────────────────────────────────────────
     function isValidRoom(data) {
       return data.keys().hasAll(['id', 'number', 'type', 'price', 'status']) &&
              data.price is number;
     }
 
-    match /rooms/{roomId} {
-      allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidRoom(incoming()) && isValidId(roomId);
-      allow delete: if isSignedIn();
-    }
-
-    // ── Audit Logs (Immutable) ────────────────────────────────────────────────
     function isValidAuditLog(data) {
       return data.keys().hasAll(['id', 'userName', 'userId', 'action', 'details', 'timestamp']);
     }
 
+    // ── Staff ─────────────────────────────────────────────────────────────────
+    match /staff/{staffId} {
+      allow get, list: if true;
+      allow create, update: if isValidUser(incoming()) && isValidId(staffId);
+      allow delete: if true;
+    }
+
+    // ── Inventory ─────────────────────────────────────────────────────────────
+    match /inventory/{itemId} {
+      allow get, list: if true;
+      allow create, update: if isValidInventory(incoming()) && isValidId(itemId);
+      allow delete: if true;
+    }
+
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+    match /tabs/{tabId} {
+      allow get, list: if true;
+      allow create: if isValidTab(incoming()) && isValidId(tabId);
+      allow update: if isValidTab(incoming());
+      allow delete: if true;
+    }
+
+    // ── Rooms ─────────────────────────────────────────────────────────────────
+    match /rooms/{roomId} {
+      allow get, list: if true;
+      allow create, update: if isValidRoom(incoming()) && isValidId(roomId);
+      allow delete: if true;
+    }
+
+    // ── Audit Logs (append-only) ──────────────────────────────────────────────
     match /auditLogs/{logId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidAuditLog(incoming()) && isValidId(logId);
-      allow update, delete: if false; 
+      allow get, list: if true;
+      allow create: if isValidAuditLog(incoming()) && isValidId(logId);
+      allow update, delete: if false;
+    }
+
+    // ── Default deny ──────────────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

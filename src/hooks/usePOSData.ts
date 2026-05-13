@@ -13,11 +13,9 @@ import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebas
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { User, InventoryItem, Tab, AuditLog, TabStatus, ProductType, Room } from '../types';
 
-// Helper to remove undefined fields recursively
 function cleanData(data: any): any {
   if (data === null || typeof data !== 'object') return data;
   if (Array.isArray(data)) return data.map(cleanData);
-  
   const clean: any = {};
   Object.keys(data).forEach(key => {
     const value = data[key];
@@ -70,7 +68,14 @@ export function usePOSData(): POSData {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   const loadingDoneRef = useRef(false);
+  const tabsRef = useRef<Tab[]>([]);
+  const staffRef = useRef<User[]>([]);
+  const inventoryRef = useRef<InventoryItem[]>([]);
+  tabsRef.current = tabs;
+  staffRef.current = staff;
+  inventoryRef.current = inventory;
 
   const finishLoading = () => {
     if (!loadingDoneRef.current) {
@@ -79,34 +84,15 @@ export function usePOSData(): POSData {
     }
   };
 
-  const tabsRef = useRef<Tab[]>([]);
-  tabsRef.current = tabs;
-
-  // 1. Handle Authentication STATE
+  // Track optional Google auth state (for UI indicator only)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setIsAuthenticated(true);
-        finishLoading();
-      } else {
-        setIsAuthenticated(false);
-        // We don't force login here, just show local state
-        finishLoading();
-      }
+      setIsAuthenticated(!!user);
     });
     return unsubscribe;
   }, []);
 
-  const loginWithGoogle = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (err) {
-      console.error('Google login failed:', err);
-    }
-  };
-
-  // 2. Network Status
+  // Network status
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -118,9 +104,9 @@ export function usePOSData(): POSData {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
+  // ── Firestore listeners — no auth required ────────────────────────────────
 
+  useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, 'staff'),
       (snapshot) => {
@@ -129,19 +115,18 @@ export function usePOSData(): POSData {
           setStaffState(docs);
           LS.set('ls_staff', docs);
         } else {
-          // Firestore empty — seed initial staff
+          // Seed initial staff into Firestore if empty
           const initialStaff: User[] = [
             { id: '1', name: 'James Barman', pin: '1111', role: 'STAFF' as any },
             { id: '2', name: 'Owner', pin: '1234', role: 'OWNER' as any },
             { id: '3', name: 'Supervisor Sarah', pin: '5555', role: 'SUPERVISOR' as any },
           ];
-          initialStaff.forEach(s => setDoc(doc(db, 'staff', s.id), s));
+          initialStaff.forEach(s => setDoc(doc(db, 'staff', s.id), s).catch(() => {}));
         }
         finishLoading();
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, 'staff');
-        // Keep localStorage-seeded state; just unblock loading
         finishLoading();
       }
     );
@@ -149,8 +134,6 @@ export function usePOSData(): POSData {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-
     const unsubscribe = onSnapshot(
       collection(db, 'inventory'),
       (snapshot) => {
@@ -165,7 +148,7 @@ export function usePOSData(): POSData {
             { id: 'f1', name: 'Mbuzi Choma (1KG)', price: 1800, stock: 30, category: 'Food', isQuickSell: true, type: ProductType.FOOD },
             { id: 'cw1', name: 'Body Wash (Small)', price: 400, stock: 999, category: 'Carwash', isQuickSell: true, type: ProductType.SERVICE },
           ];
-          initialInventory.forEach(item => setDoc(doc(db, 'inventory', item.id), item));
+          initialInventory.forEach(item => setDoc(doc(db, 'inventory', item.id), item).catch(() => {}));
         }
       },
       (error) => handleFirestoreError(error, OperationType.LIST, 'inventory')
@@ -174,8 +157,6 @@ export function usePOSData(): POSData {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-
     const q = query(collection(db, 'tabs'), orderBy('updatedAt', 'desc'), limit(500));
     const unsubscribe = onSnapshot(
       q,
@@ -190,8 +171,6 @@ export function usePOSData(): POSData {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-
     const unsubscribe = onSnapshot(
       collection(db, 'rooms'),
       (snapshot) => {
@@ -205,7 +184,7 @@ export function usePOSData(): POSData {
             { id: 'r2', number: '102', type: 'Standard', price: 3500, status: 'AVAILABLE' as any },
             { id: 'r3', number: '103', type: 'Deluxe', price: 5500, status: 'AVAILABLE' as any },
           ];
-          initialRooms.forEach(r => setDoc(doc(db, 'rooms', r.id), r));
+          initialRooms.forEach(r => setDoc(doc(db, 'rooms', r.id), r).catch(() => {}));
         }
       },
       (error) => handleFirestoreError(error, OperationType.LIST, 'rooms')
@@ -214,8 +193,6 @@ export function usePOSData(): POSData {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-
     const q = query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(200));
     const unsubscribe = onSnapshot(
       q,
@@ -229,12 +206,20 @@ export function usePOSData(): POSData {
     return unsubscribe;
   }, []);
 
+  // ── Write helpers ─────────────────────────────────────────────────────────
+
+  const loginWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      console.error('Google login failed:', err);
+    }
+  };
+
   const setStaff = async (newStaff: User[]) => {
     setStaffState(newStaff);
     LS.set('ls_staff', newStaff);
-    
-    if (!isAuthenticated) return;
-    
     for (const s of newStaff) {
       try {
         await setDoc(doc(db, 'staff', s.id), cleanData(s));
@@ -242,13 +227,9 @@ export function usePOSData(): POSData {
         handleFirestoreError(err, OperationType.WRITE, `staff/${s.id}`);
       }
     }
-    const existingIds = staff.map(s => s.id);
-    const newIds = newStaff.map(s => s.id);
-    const toDelete = existingIds.filter(id => !newIds.includes(id));
+    const toDelete = staffRef.current.map(s => s.id).filter(id => !newStaff.find(s => s.id === id));
     for (const id of toDelete) {
-      try {
-        await deleteDoc(doc(db, 'staff', id));
-      } catch (err) {
+      try { await deleteDoc(doc(db, 'staff', id)); } catch (err) {
         handleFirestoreError(err, OperationType.DELETE, `staff/${id}`);
       }
     }
@@ -257,9 +238,6 @@ export function usePOSData(): POSData {
   const setInventory = async (newInventory: InventoryItem[]) => {
     setInventoryState(newInventory);
     LS.set('ls_inventory', newInventory);
-    
-    if (!isAuthenticated) return;
-    
     for (const item of newInventory) {
       try {
         await setDoc(doc(db, 'inventory', item.id), cleanData(item));
@@ -267,13 +245,9 @@ export function usePOSData(): POSData {
         handleFirestoreError(err, OperationType.WRITE, `inventory/${item.id}`);
       }
     }
-    const existingIds = inventory.map(i => i.id);
-    const newIds = newInventory.map(i => i.id);
-    const toDelete = existingIds.filter(id => !newIds.includes(id));
+    const toDelete = inventoryRef.current.map(i => i.id).filter(id => !newInventory.find(i => i.id === id));
     for (const id of toDelete) {
-      try {
-        await deleteDoc(doc(db, 'inventory', id));
-      } catch (err) {
+      try { await deleteDoc(doc(db, 'inventory', id)); } catch (err) {
         handleFirestoreError(err, OperationType.DELETE, `inventory/${id}`);
       }
     }
@@ -282,10 +256,7 @@ export function usePOSData(): POSData {
   const setTabs = async (newTabs: Tab[]) => {
     setTabsState(newTabs);
     LS.set('ls_tabs', newTabs);
-    
-    if (!isAuthenticated) return;
-    
-    const currentTabMap = new Map<string, Tab>(tabsRef.current.map(t => [t.id, t] as [string, Tab]));
+    const currentTabMap = new Map<string, Tab>(tabsRef.current.map(t => [t.id, t]));
     for (const tab of newTabs) {
       const existing = currentTabMap.get(tab.id);
       if (!existing || existing.updatedAt !== tab.updatedAt || existing.status !== tab.status) {
@@ -299,6 +270,7 @@ export function usePOSData(): POSData {
   };
 
   const deleteTab = async (tabId: string) => {
+    setTabsState(prev => prev.filter(t => t.id !== tabId));
     try {
       await deleteDoc(doc(db, 'tabs', tabId));
     } catch (err) {
@@ -309,9 +281,6 @@ export function usePOSData(): POSData {
   const setRooms = async (newRooms: Room[]) => {
     setRoomsState(newRooms);
     LS.set('ls_rooms', newRooms);
-    
-    if (!isAuthenticated) return;
-    
     for (const r of newRooms) {
       try {
         await setDoc(doc(db, 'rooms', r.id), cleanData(r));
@@ -330,12 +299,8 @@ export function usePOSData(): POSData {
       details,
       timestamp: Date.now(),
     };
-    
-    setAuditLogsState([newLog, ...auditLogs]);
+    setAuditLogsState(prev => [newLog, ...prev]);
     LS.set('ls_auditLogs', [newLog, ...auditLogs]);
-    
-    if (!isAuthenticated) return;
-    
     try {
       await setDoc(doc(db, 'auditLogs', newLog.id), cleanData(newLog));
     } catch (err) {
@@ -352,6 +317,6 @@ export function usePOSData(): POSData {
     isOnline,
     isLoading,
     loginWithGoogle,
-    isAuthenticated
+    isAuthenticated,
   };
 }
