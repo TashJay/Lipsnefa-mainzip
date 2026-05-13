@@ -5,7 +5,7 @@ import {
   Settings, CreditCard, ClipboardList, Package, Users,
   History, Wifi, WifiOff, X, Check, Save, RotateCcw,
   Sun, Moon, Zap, Crown, Eye, EyeOff, ArrowDown, Printer,
-  TrendingUp, Trash2, FileText
+  TrendingUp, Trash2, FileText, Download, Share
 } from 'lucide-react';
 import { PinPad } from './components/PinPad';
 import { TransactionModal } from './components/TransactionModal';
@@ -14,6 +14,7 @@ import { Dashboard } from './components/Dashboard';
 import { Reports } from './components/Reports';
 import { ConfirmDialog, DialogState } from './components/ConfirmDialog';
 import { usePOSData } from './hooks/usePOSData';
+import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { hashPin } from './lib/crypto';
 import { User, UserRole, TabStatus, Product, TabItem, Tab, ProductType, Room } from './types';
 
@@ -31,8 +32,11 @@ export default function App() {
     isAuthenticated
   } = usePOSData();
 
+  const { canInstall, isIOS, isInstalled, triggerInstall } = useInstallPrompt();
+
   // ── All state must come before any conditional returns ──────────────────────
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [showIOSInstall, setShowIOSInstall] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState<
     'dashboard' | 'sales' | 'tabs' | 'inventory' | 'staff' | 'audit' | 'debts' | 'rooms' | 'reports'
@@ -617,6 +621,19 @@ export default function App() {
                 {isOnline ? 'Cloud Sync' : 'Local Mode'}
               </span>
             </div>
+
+            {!isInstalled && (canInstall || isIOS) && (
+              <button
+                onClick={() => isIOS ? setShowIOSInstall(true) : triggerInstall()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-neon-green/10 border border-neon-green/30 rounded-xl hover:bg-neon-green/20 transition-all group"
+              >
+                <Download size={14} className="text-neon-green" />
+                <span className="text-[10px] text-neon-green font-black uppercase tracking-widest leading-none">
+                  Install App
+                </span>
+              </button>
+            )}
+
             <span className="text-[8px] themed-text-dim opacity-30 uppercase tracking-[0.2em] font-black">Powered by August Tech</span>
           </div>
         </div>
@@ -1125,6 +1142,57 @@ export default function App() {
       </AnimatePresence>
 
       <ConfirmDialog dialog={dialog} onClose={closeDialog} />
+
+      <AnimatePresence>
+        {showIOSInstall && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/80 backdrop-blur-md"
+            onClick={() => setShowIOSInstall(false)}
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm themed-bg-secondary border themed-border rounded-[2rem] p-8 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-12 h-12 bg-neon-green rounded-2xl flex items-center justify-center">
+                  <Download size={22} className="text-black" />
+                </div>
+                <button onClick={() => setShowIOSInstall(false)} className="themed-text-dim hover:themed-text">
+                  <X size={20} />
+                </button>
+              </div>
+              <h3 className="text-xl font-black themed-text mb-1">Install on iPhone / iPad</h3>
+              <p className="themed-text-dim text-sm mb-6">Add Lips &amp; Sips to your home screen for a full-screen experience.</p>
+              <ol className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-neon-green/20 text-neon-green rounded-full flex items-center justify-center text-xs font-black shrink-0 mt-0.5">1</span>
+                  <p className="text-sm themed-text font-medium">Tap the <Share size={14} className="inline mx-1 text-blue-400" /> <strong>Share</strong> button at the bottom of your Safari browser</p>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-neon-green/20 text-neon-green rounded-full flex items-center justify-center text-xs font-black shrink-0 mt-0.5">2</span>
+                  <p className="text-sm themed-text font-medium">Scroll down and tap <strong>"Add to Home Screen"</strong></p>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-neon-green/20 text-neon-green rounded-full flex items-center justify-center text-xs font-black shrink-0 mt-0.5">3</span>
+                  <p className="text-sm themed-text font-medium">Tap <strong>"Add"</strong> in the top right corner</p>
+                </li>
+              </ol>
+              <button
+                onClick={() => setShowIOSInstall(false)}
+                className="mt-8 w-full py-4 bg-neon-green text-black rounded-2xl font-black text-xs uppercase tracking-widest"
+              >
+                Got it
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
     </>
   );

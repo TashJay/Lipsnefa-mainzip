@@ -2,15 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Primary meta -->
     <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Lips & Sips Premium POS System" />
-    <title>Lips & Sips POS</title>
+    <meta name="description" content="Lips &amp; Sips — Premium Point of Sale for Night Clubs &amp; Lounges" />
+    <title>Lips &amp; Sips POS</title>
+
+    <!-- PWA / iOS -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="L&amp;S POS" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+
+    <!-- Splash / tile -->
+    <meta name="msapplication-TileColor" content="#000000" />
+    <meta name="msapplication-TileImage" content="/pwa-192x192.svg" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-  <script>eruda.init();</script>
   </body>
 </html>
-
