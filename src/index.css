@@ -121,7 +121,22 @@ body.light {
 
 /* ── Print styles ──────────────────────────────────────────────────────── */
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  html, body {
+    width: 80mm;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
   .print\:hidden {
     display: none !important;
+  }
+
+  .print\:block {
+    display: block !important;
   }
 }

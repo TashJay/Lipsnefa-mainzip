@@ -505,7 +505,14 @@ export default function App() {
 
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
-    <div className="h-screen themed-bg-primary flex flex-col md:flex-row overflow-hidden">
+    <>
+    {printingTab && (
+      <Receipt
+        tab={printingTab}
+        staffName={staff.find(s => s.id === printingTab.staffId)?.name || 'Terminal'}
+      />
+    )}
+    <div className="h-screen themed-bg-primary flex flex-col md:flex-row overflow-hidden print:hidden">
 
       {/* Mobile Top Bar */}
       <div className="md:hidden themed-bg-secondary border-b themed-border p-4 flex items-center justify-between shadow-sm">
@@ -1135,15 +1142,9 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {printingTab && (
-        <Receipt
-          tab={printingTab}
-          staffName={staff.find(s => s.id === printingTab.staffId)?.name || 'Terminal'}
-        />
-      )}
-
       <ConfirmDialog dialog={dialog} onClose={closeDialog} />
     </div>
+    </>
   );
 }
 
