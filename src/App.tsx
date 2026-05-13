@@ -461,26 +461,6 @@ export default function App() {
         </div>
         <PinPad onSuccess={handleLogin} error={loginError} isOnline={isOnline} />
         
-        {!isAuthenticated && (
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            onClick={loginWithGoogle}
-            className="mt-6 px-6 py-3 bg-white/5 border themed-border rounded-2xl flex items-center gap-3 hover:bg-white/10 transition-all group"
-          >
-            <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center p-1">
-              <svg viewBox="0 0 24 24" className="w-full h-full"><path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.102 6.612l4.164 3.153z"/><path fill="#34A853" d="M16.04 18.013c-1.09.693-2.459 1.096-4.04 1.096-3.132 0-5.834-2.128-6.78-5.074L1.056 17.169C3.103 21.245 7.259 24 12 24c3.055 0 5.79-.996 7.841-2.691l-3.801-3.296z"/><path fill="#4285F4" d="M19.841 21.309C22.423 19.173 24 16.14 24 12c0-.832-.074-1.636-.214-2.413l-11.786-.013v4.568h6.631c-.286 1.554-1.159 2.872-2.484 3.754l3.71 3.413z"/><path fill="#FBBC05" d="M5.26 14.035A7.03 7.03 0 0 1 4.909 12c0-.712.106-1.4.303-2.044L1.05 6.808A11.967 11.967 0 0 0 0 12c0 1.91.442 3.718 1.23 5.33l4.03-3.295z"/></svg>
-            </div>
-            <span className="text-[10px] themed-text font-black uppercase tracking-widest">Connect to Cloud Database</span>
-          </motion.button>
-        )}
-
-        {isAuthenticated && (
-          <div className="mt-6 flex items-center gap-2 px-4 py-2 bg-neon-green/10 border border-neon-green/20 rounded-xl">
-            <Check size={12} className="text-neon-green" />
-            <span className="text-[9px] text-neon-green font-black uppercase tracking-widest">Cloud Sync Active</span>
-          </div>
-        )}
 
         <footer className="mt-12 text-[10px] themed-text-dim uppercase tracking-widest font-bold opacity-30">
           Powered by August Tech
@@ -1045,6 +1025,7 @@ export default function App() {
         {editingItem && (
           <InventoryEditModal
             item={editingItem}
+            categories={categories}
             onConfirm={(updated: any) => {
               if (editingItem.id === 'NEW') {
                 const newItem = { ...updated, id: crypto.randomUUID() };
@@ -1412,12 +1393,19 @@ function InventoryManager({ inventory, setInventory, addAuditLog, currentUser, s
   );
 }
 
-function InventoryEditModal({ item, onConfirm, onCancel }: { item: any; onConfirm: (updated: any) => void; onCancel: () => void }) {
+const DEFAULT_CATEGORIES = ['Beers', 'Bottles', 'Cocktails', 'Soft Drinks', 'Food', 'Carwash', 'Rooms', 'Services'];
+
+function InventoryEditModal({ item, onConfirm, onCancel, categories = [] }: { item: any; onConfirm: (updated: any) => void; onCancel: () => void; categories?: string[] }) {
   const [formData, setFormData] = useState({
     ...item,
     price: item.price === 0 ? '' : item.price,
     stock: item.stock === 0 ? '' : item.stock
   });
+  const [customCategory, setCustomCategory] = useState('');
+
+  const allCategories = Array.from(new Set([...DEFAULT_CATEGORIES, ...categories])).sort();
+  const isCustom = formData.category && !allCategories.includes(formData.category);
+  const [showCustom, setShowCustom] = useState(isCustom);
 
   const handleConfirm = () => {
     onConfirm({
@@ -1442,7 +1430,38 @@ function InventoryEditModal({ item, onConfirm, onCancel }: { item: any; onConfir
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[10px] themed-text-dim uppercase font-black tracking-widest block font-mono">Category</label>
-              <input type="text" required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full themed-bg-primary border themed-border rounded-2xl py-4 px-6 themed-text focus:outline-none focus:border-neon-green transition-all font-bold" placeholder="e.g. Beer" />
+              <select
+                value={showCustom ? '__custom__' : (formData.category || '')}
+                onChange={(e) => {
+                  if (e.target.value === '__custom__') {
+                    setShowCustom(true);
+                    setFormData({ ...formData, category: customCategory });
+                  } else {
+                    setShowCustom(false);
+                    setFormData({ ...formData, category: e.target.value });
+                  }
+                }}
+                className="w-full themed-bg-primary border themed-border rounded-2xl py-4 px-6 themed-text focus:outline-none focus:border-neon-green transition-all font-bold appearance-none"
+              >
+                <option value="" disabled>Select category…</option>
+                {allCategories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+                <option value="__custom__">Other (custom)…</option>
+              </select>
+              {showCustom && (
+                <input
+                  type="text"
+                  autoFocus
+                  value={customCategory}
+                  onChange={(e) => {
+                    setCustomCategory(e.target.value);
+                    setFormData({ ...formData, category: e.target.value });
+                  }}
+                  className="w-full themed-bg-primary border border-neon-green/40 rounded-2xl py-4 px-6 themed-text focus:outline-none focus:border-neon-green transition-all font-bold mt-2"
+                  placeholder="Type custom category…"
+                />
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-[10px] themed-text-dim uppercase font-black tracking-widest block font-mono">Type</label>
