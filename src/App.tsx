@@ -144,6 +144,7 @@ export default function App() {
     let user = staff.find(u => u.pin === hashed) || staff.find(u => u.pin === pin);
     if (user) {
       setCurrentUser(user);
+      setActiveTab('dashboard');
       setLoginError('');
       addAuditLog(user, 'Login', 'User logged in to terminal');
     } else {
