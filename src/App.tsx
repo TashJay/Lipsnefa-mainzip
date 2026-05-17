@@ -5,7 +5,7 @@ import {
   Settings, CreditCard, ClipboardList, Package, Users,
   History, Wifi, WifiOff, X, Check, Save, RotateCcw,
   Sun, Moon, Zap, Crown, Eye, EyeOff, ArrowDown, Printer,
-  TrendingUp, Trash2, FileText, Download, Share
+  TrendingUp, Trash2, FileText, Download, Share, Truck
 } from 'lucide-react';
 import { PinPad } from './components/PinPad';
 import { TransactionModal } from './components/TransactionModal';
@@ -13,6 +13,7 @@ import { Receipt } from './components/Receipt';
 import { Dashboard } from './components/Dashboard';
 import { Reports } from './components/Reports';
 import { ConfirmDialog, DialogState } from './components/ConfirmDialog';
+import { SupplierManager } from './components/SupplierManager';
 import { usePOSData } from './hooks/usePOSData';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
 import { hashPin } from './lib/crypto';
@@ -24,6 +25,7 @@ export default function App() {
     inventory, setInventory,
     tabs, setTabs, deleteTab,
     rooms, setRooms,
+    suppliers, setSuppliers, deleteSupplier,
     auditLogs,
     addAuditLog,
     isOnline,
@@ -39,7 +41,7 @@ export default function App() {
   const [showIOSInstall, setShowIOSInstall] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'sales' | 'tabs' | 'inventory' | 'staff' | 'audit' | 'debts' | 'rooms' | 'reports'
+    'dashboard' | 'sales' | 'tabs' | 'inventory' | 'staff' | 'audit' | 'debts' | 'rooms' | 'reports' | 'suppliers'
   >('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const lastActivityRef = useRef(Date.now());
@@ -562,6 +564,7 @@ export default function App() {
               </div>
               <NavItem active={activeTab === 'debts'} icon={CreditCard} label="Unpaid Debts" onClick={() => { setActiveTab('debts'); setIsMobileMenuOpen(false); }} />
               <NavItem active={activeTab === 'inventory'} icon={Package} label="Inventory" onClick={() => { setActiveTab('inventory'); setIsMobileMenuOpen(false); }} />
+              <NavItem active={activeTab === 'suppliers'} icon={Truck} label="Suppliers" onClick={() => { setActiveTab('suppliers'); setIsMobileMenuOpen(false); }} />
             </>
           )}
 
@@ -984,6 +987,16 @@ export default function App() {
                   setCustomerName(prev => prev || `Room ${room.number}`);
                   setActiveTab('sales');
                 }}
+              />
+            </motion.div>
+          )}
+
+          {activeTab === 'suppliers' && (
+            <motion.div key="suppliers" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="h-full flex flex-col">
+              <SupplierManager
+                suppliers={suppliers}
+                setSuppliers={setSuppliers}
+                deleteSupplier={deleteSupplier}
               />
             </motion.div>
           )}

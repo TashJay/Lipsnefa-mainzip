@@ -67,6 +67,16 @@ service cloud.firestore {
       allow delete: if true;
     }
 
+    // ── Suppliers ─────────────────────────────────────────────────────────────
+    match /suppliers/{supplierId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(supplierId) &&
+        incoming().keys().hasAll(['id', 'name', 'phone', 'email', 'category', 'notes', 'createdAt']) &&
+        incoming().name is string && incoming().name.size() > 0 &&
+        incoming().name.size() <= 200;
+      allow delete: if true;
+    }
+
     // ── Audit Logs (append-only) ──────────────────────────────────────────────
     match /auditLogs/{logId} {
       allow get, list: if true;

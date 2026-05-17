@@ -10,97 +10,81 @@ export const Receipt: React.FC<ReceiptProps> = ({ tab, staffName }) => {
   const date = new Date(tab.updatedAt || tab.createdAt);
   const dateStr = date.toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' });
   const timeStr = date.toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit', hour12: true });
-  const subtotal = tab.items.reduce((sum: number, item: TabItem) => sum + item.priceAtSale * item.quantity, 0);
 
   return (
     <div
       className="print:block hidden"
       style={{
-        width: '80mm',
+        width: '58mm',
         margin: '0 auto',
-        padding: '6mm 4mm',
+        padding: '3mm 3mm',
         fontFamily: "'Courier New', Courier, monospace",
-        fontSize: '10px',
-        lineHeight: '1.5',
+        fontSize: '7.5px',
+        lineHeight: '1.4',
         color: '#000',
         background: '#fff',
       }}
     >
       {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '6mm' }}>
-        <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '-0.5px', textTransform: 'uppercase' }}>
+      <div style={{ textAlign: 'center', marginBottom: '3mm' }}>
+        <div style={{ fontSize: '13px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.3px' }}>
           LIPS &amp; SIPS
         </div>
-        <div style={{ fontSize: '8px', letterSpacing: '3px', textTransform: 'uppercase', marginTop: '1mm' }}>
+        <div style={{ fontSize: '6.5px', letterSpacing: '2px', textTransform: 'uppercase' }}>
           Premium Club Terminal
         </div>
-        <div style={{ fontSize: '8px', marginTop: '1mm', opacity: 0.6 }}>
-          Nairobi, Kenya
-        </div>
-        <div style={{ borderTop: '1px dashed #000', marginTop: '4mm' }} />
+        <div style={{ borderTop: '1px dashed #000', marginTop: '2mm' }} />
       </div>
 
-      {/* Transaction details */}
-      <div style={{ marginBottom: '4mm' }}>
-        <Row label="DATE" value={dateStr} />
-        <Row label="TIME" value={timeStr} />
-        <Row label="REF #" value={tab.id.slice(0, 8).toUpperCase()} />
-        <Row label="SERVED BY" value={staffName.toUpperCase()} />
+      {/* Details */}
+      <div style={{ marginBottom: '2mm' }}>
+        <Row label="DATE" value={`${dateStr} ${timeStr}`} />
+        <Row label="REF" value={`#${tab.id.slice(0, 8).toUpperCase()}`} />
+        <Row label="BY" value={staffName.toUpperCase()} />
         <Row label="CLIENT" value={tab.customerName.toUpperCase()} />
-        {tab.paymentType && <Row label="PAYMENT" value={tab.paymentType.toUpperCase()} />}
-        {tab.mpesaPhone && <Row label="M-PESA" value={tab.mpesaPhone} />}
+        {tab.paymentType && <Row label="VIA" value={tab.paymentType.toUpperCase()} />}
+        {tab.mpesaPhone && <Row label="TEL" value={tab.mpesaPhone} />}
       </div>
 
-      <div style={{ borderTop: '1px dashed #000', marginBottom: '4mm' }} />
+      <div style={{ borderTop: '1px dashed #000', marginBottom: '2mm' }} />
 
       {/* Items */}
-      <div style={{ marginBottom: '4mm' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, marginBottom: '2mm', fontSize: '9px' }}>
-          <span style={{ width: '10mm' }}>QTY</span>
+      <div style={{ marginBottom: '2mm' }}>
+        <div style={{ display: 'flex', fontWeight: 700, marginBottom: '1mm', fontSize: '6.5px', borderBottom: '1px solid #ccc', paddingBottom: '1mm' }}>
+          <span style={{ width: '8mm' }}>QTY</span>
           <span style={{ flex: 1 }}>ITEM</span>
-          <span style={{ width: '18mm', textAlign: 'right' }}>KES</span>
+          <span style={{ width: '14mm', textAlign: 'right' }}>KES</span>
         </div>
         {tab.items.map((item: TabItem, idx: number) => (
-          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5mm' }}>
-            <span style={{ width: '10mm' }}>{item.quantity}x</span>
+          <div key={idx} style={{ display: 'flex', marginBottom: '1mm' }}>
+            <span style={{ width: '8mm' }}>{item.quantity}x</span>
             <span style={{ flex: 1 }}>{item.name}</span>
-            <span style={{ width: '18mm', textAlign: 'right' }}>
+            <span style={{ width: '14mm', textAlign: 'right' }}>
               {(item.priceAtSale * item.quantity).toLocaleString()}
             </span>
           </div>
         ))}
       </div>
 
-      <div style={{ borderTop: '1px dashed #000', marginBottom: '4mm' }} />
+      <div style={{ borderTop: '1px dashed #000', marginBottom: '2mm' }} />
 
-      {/* Totals */}
-      <div style={{ marginBottom: '6mm' }}>
-        <Row label="SUBTOTAL" value={`KES ${subtotal.toLocaleString()}`} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '13px', marginTop: '2mm' }}>
+      {/* Total */}
+      <div style={{ marginBottom: '3mm' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '10px' }}>
           <span>TOTAL</span>
           <span>KES {tab.total.toLocaleString()}</span>
         </div>
       </div>
 
-      <div style={{ borderTop: '1px dashed #000', marginBottom: '6mm' }} />
+      <div style={{ borderTop: '1px dashed #000', marginBottom: '2mm' }} />
 
       {/* Footer */}
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '12px', fontWeight: 900, letterSpacing: '1px', marginBottom: '2mm' }}>
-          WELCOME AGAIN!
-        </div>
-        <div style={{ fontSize: '9px', marginBottom: '1mm' }}>
-          Thank you for choosing Lips &amp; Sips.
-        </div>
-        <div style={{ fontSize: '9px', marginBottom: '4mm' }}>
-          We look forward to seeing you again soon.
-        </div>
-        <div style={{ borderTop: '1px dashed #000', marginBottom: '4mm' }} />
-        <div style={{ fontSize: '7px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '2px' }}>
+        <div style={{ fontSize: '8px', fontWeight: 900, marginBottom: '1mm' }}>WELCOME AGAIN!</div>
+        <div style={{ fontSize: '6.5px', marginBottom: '1mm' }}>Thank you for choosing Lips &amp; Sips.</div>
+        <div style={{ borderTop: '1px dashed #000', marginTop: '2mm', paddingTop: '1.5mm' }} />
+        <div style={{ fontSize: '6px', opacity: 0.4, textTransform: 'uppercase', letterSpacing: '1.5px' }}>
           Powered by August Tech
-        </div>
-        <div style={{ fontSize: '7px', opacity: 0.4, marginTop: '1mm' }}>
-          {tab.id.toUpperCase()}
         </div>
       </div>
     </div>
@@ -109,9 +93,9 @@ export const Receipt: React.FC<ReceiptProps> = ({ tab, staffName }) => {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1mm' }}>
-      <span style={{ opacity: 0.6 }}>{label}:</span>
-      <span style={{ fontWeight: 700, textAlign: 'right', maxWidth: '50mm', wordBreak: 'break-all' }}>{value}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8mm' }}>
+      <span style={{ opacity: 0.55, minWidth: '8mm' }}>{label}:</span>
+      <span style={{ fontWeight: 700, textAlign: 'right', maxWidth: '42mm', wordBreak: 'break-all' }}>{value}</span>
     </div>
   );
 }

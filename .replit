@@ -18,6 +18,10 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "M-Pesa API Server"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -30,6 +34,18 @@ task = "shell.exec"
 args = "pnpm run dev"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "M-Pesa API Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run server"
+waitForPort = 3001
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[ports]]
 localPort = 3000
 externalPort = 3000
@@ -40,6 +56,10 @@ externalPort = 80
 
 [[ports]]
 localPort = 5001
+externalPort = 3001
+
+[[ports]]
+localPort = 3001
 externalPort = 3001
 
 [deployment]

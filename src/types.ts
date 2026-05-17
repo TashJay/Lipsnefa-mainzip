@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 export enum UserRole {
   STAFF = 'STAFF',
   SUPERVISOR = 'SUPERVISOR',
@@ -81,3 +76,13 @@ export interface AuditLog {
 }
 
 export interface InventoryItem extends Product {}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  category: string;
+  notes: string;
+  createdAt: number;
+}

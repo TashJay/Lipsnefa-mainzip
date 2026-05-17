@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { User, InventoryItem, Tab, AuditLog, TabStatus, ProductType, Room } from '../types';
+import { User, InventoryItem, Tab, AuditLog, TabStatus, ProductType, Room, Supplier } from '../types';
 
 function cleanData(data: any): any {
   if (data === null || typeof data !== 'object') return data;
@@ -36,6 +36,9 @@ export interface POSData {
   deleteTab: (tabId: string) => Promise<void>;
   rooms: Room[];
   setRooms: (rooms: Room[]) => Promise<void>;
+  suppliers: Supplier[];
+  setSuppliers: (suppliers: Supplier[]) => Promise<void>;
+  deleteSupplier: (id: string) => Promise<void>;
   auditLogs: AuditLog[];
   addAuditLog: (user: User, action: string, details: string) => Promise<void>;
   isOnline: boolean;
@@ -64,6 +67,7 @@ export function usePOSData(): POSData {
   const [inventory, setInventoryState] = useState<InventoryItem[]>(() => LS.get('ls_inventory', []));
   const [tabs, setTabsState] = useState<Tab[]>(() => LS.get('ls_tabs', []));
   const [rooms, setRoomsState] = useState<Room[]>(() => LS.get('ls_rooms', []));
+  const [suppliers, setSuppliersState] = useState<Supplier[]>(() => LS.get('ls_suppliers', []));
   const [auditLogs, setAuditLogsState] = useState<AuditLog[]>(() => LS.get('ls_auditLogs', []));
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isLoading, setIsLoading] = useState(true);
@@ -193,6 +197,19 @@ export function usePOSData(): POSData {
   }, []);
 
   useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'suppliers'),
+      (snapshot) => {
+        const docs = snapshot.docs.map(d => d.data() as Supplier);
+        setSuppliersState(docs);
+        LS.set('ls_suppliers', docs);
+      },
+      (error) => handleFirestoreError(error, OperationType.LIST, 'suppliers')
+    );
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
     const q = query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(200));
     const unsubscribe = onSnapshot(
       q,
@@ -290,6 +307,27 @@ export function usePOSData(): POSData {
     }
   };
 
+  const setSuppliers = async (newSuppliers: Supplier[]) => {
+    setSuppliersState(newSuppliers);
+    LS.set('ls_suppliers', newSuppliers);
+    for (const s of newSuppliers) {
+      try {
+        await setDoc(doc(db, 'suppliers', s.id), cleanData(s));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `suppliers/${s.id}`);
+      }
+    }
+  };
+
+  const deleteSupplier = async (id: string) => {
+    setSuppliersState(prev => prev.filter(s => s.id !== id));
+    try {
+      await deleteDoc(doc(db, 'suppliers', id));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `suppliers/${id}`);
+    }
+  };
+
   const addAuditLog = async (user: User, action: string, details: string) => {
     const newLog: AuditLog = {
       id: crypto.randomUUID(),
@@ -313,6 +351,7 @@ export function usePOSData(): POSData {
     inventory, setInventory,
     tabs, setTabs, deleteTab,
     rooms, setRooms,
+    suppliers, setSuppliers, deleteSupplier,
     auditLogs, addAuditLog,
     isOnline,
     isLoading,
